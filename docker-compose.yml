@@ -1,0 +1,122 @@
+version: "3"
+
+services:
+  app:
+    build: . 
+    ports:
+      - 8000:8000
+    volumes:    
+      - ./:/app  
+    
+  zookeeper:
+    image: docker.io/bitnami/zookeeper:3.8
+    ports:
+      - 2181:2181
+    volumes:
+      - zookeeper_data:/bitnami
+    environment:   
+      - ALLOW_ANONYMOUS_LOGIN=yes 
+  kafka:
+    image: docker.io/bitnami/kafka:3.2
+    ports:
+      - 9092:9092
+    volumes:
+      - kafka_data:/bitnami
+    environment:
+      - KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper:2181  
+      - ALLOW_PLAINTEXT_LISTENER=yes  
+    depends_on:
+      - zookeeper
+    healthcheck: 
+      test: ["CMD-SHELL", "kafka-topics.sh --bootstrap-server 127.0.0.1:9092 --list"]
+      interval: 10s
+      timeout: 30s
+      retries: 5
+      start_period: 30s
+
+  socket:
+    build: ./server/
+    ports:
+      - 12345:12345
+    volumes:
+      - ./server:/main/server
+  producer:
+    build: ./producer/
+    depends_on:
+      kafka:
+        condition: service_healthy 
+      
+    volumes:
+      - ./producer:/main/producer
+  consumer:
+    build: ./consumer/
+    depends_on:
+      kafka:
+        condition: service_healthy
+      
+    volumes:
+      - ./consumer:/main/consumer
+
+volumes:
+  zookeeper_data:   
+    driver: local
+  kafka_data:
+    driver: local
+
+
+
+# # aws compose file
+# version: "3"
+# services:
+#   app: 
+#     image: tharishkumar1010/project-app
+#     ports:
+#       - 80:8000
+   
+    
+#   zookeeper:
+#     image: docker.io/bitnami/zookeeper:3.8
+#     ports:
+#       - 2181:2181
+    
+#     environment:   
+#       - ALLOW_ANONYMOUS_LOGIN=yes 
+#   kafka:
+#     image: docker.io/bitnami/kafka:3.2
+#     ports:
+#       - 9092:9092
+    
+#     environment:
+#       - KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper:2181  
+#       - ALLOW_PLAINTEXT_LISTENER=yes  
+#       - KAFKA_HEAP_OPTS=-Xmx500M
+#     depends_on:
+#       - zookeeper
+#     healthcheck: 
+#       test: ["CMD-SHELL", "kafka-topics.sh --bootstrap-server 127.0.0.1:9092 --list"]
+#       interval: 10s
+#       timeout: 30s
+#       retries: 5
+#       start_period: 30s
+
+#   socket:
+#     image: tharishkumar1010/project-socket
+#     ports:
+#       - 12345:12345
+   
+#   producer:
+#     image: tharishkumar1010/project-producer
+#     depends_on:
+#       kafka:
+#         condition: service_healthy 
+      
+    
+#   consumer:
+#     image: tharishkumar1010/project-consumer
+#     depends_on:
+#       kafka:
+#         condition: service_healthy
+      
+    
+
+
